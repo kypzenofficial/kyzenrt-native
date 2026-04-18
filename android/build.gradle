@@ -239,8 +239,8 @@ dependencies {
 if (isNewArchitectureEnabled()) {
   react {
     jsRootDir = file("../src/")
-    libraryName = "RNLlama"
-    codegenJavaPackageName = "com.rnllama"
+    libraryName = "KyzenRT"
+    codegenJavaPackageName = "com.kypzen.kyzenrt"
   }
 }
 

@@ -1,0 +1,33 @@
+name: Sync upstream llama.rn
+on:
+  schedule:
+    - cron: '0 9 1 * *'
+  workflow_dispatch:
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      - name: Configure git
+        run: |
+          git config user.name "kypzen-bot"
+          git config user.email "bot@kypzen.com"
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/mybigday/llama.rn.git || true
+          git fetch upstream
+      - name: Create PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.pulls.create({
+              owner: 'kypzenofficial',
+              repo: 'kyzenrt-native',
+              title: 'chore: monthly upstream sync llama.rn',
+              body: 'Auto-generated monthly sync from mybigday/llama.rn upstream.',
+              head: 'main',
+              base: 'main'
+            })
