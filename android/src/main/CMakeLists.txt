@@ -1,6 +1,35 @@
+# KyzenRT — Universal edge AI inference runtime
+# Copyright (c) 2025 Kypzen (kypzen.com)
+#
+# Built on llama.cpp (MIT) — github.com/ggml-org/llama.cpp
+# Original binding: llama.rn (MIT) — github.com/mybigday/llama.rn
+#
+# SPDX-License-Identifier: MIT
 cmake_minimum_required(VERSION 3.10)
 
-project(llama.rn)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
+  -march=armv8.2-a+i8mm \
+  -ffp-contract=fast \
+  -fno-math-errno \
+  -fno-signed-zeros \
+  -fno-trapping-math \
+  -fomit-frame-pointer \
+  -ffunction-sections \
+  -fdata-sections \
+  -fvisibility=hidden")
+
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} \
+  -Wl,--gc-sections \
+  -Wl,--icf=safe \
+  -Wl,-z,max-page-size=16384")
+
+option(GGML_CUDA "" OFF)
+option(GGML_HIP "" OFF)
+option(GGML_VULKAN "" OFF)
+option(GGML_SYCL "" OFF)
+option(GGML_OPENCL "" OFF)
+
+project(kyzenrt)
 
 set(CMAKE_ANDROID_STL_TYPE c++_shared)
 
@@ -40,9 +69,9 @@ set(JNI_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/../../../cpp/jsi/ThreadPool.cpp
 )
 
-function(build_rnllama_jni jni_name rnllama_name arch cpu_flags)
+function(build_kyzenrt_jni jni_name kyzenrt_name arch cpu_flags)
     if (NOT RNLLAMA_BUILD_FROM_SOURCE)
-        set(PREBUILT_CHECK_PATH ${CMAKE_SOURCE_DIR}/jniLibs/${ANDROID_ABI}/lib${rnllama_name}.so)
+        set(PREBUILT_CHECK_PATH ${CMAKE_SOURCE_DIR}/jniLibs/${ANDROID_ABI}/lib${kyzenrt_name}.so)
         if (NOT EXISTS ${PREBUILT_CHECK_PATH})
             message(STATUS "Skipping ${jni_name} - no prebuilt for ${ANDROID_ABI}")
             return()
@@ -50,12 +79,12 @@ function(build_rnllama_jni jni_name rnllama_name arch cpu_flags)
     endif()
 
     set(ENABLE_OPENCL OFF)
-    if (${rnllama_name} MATCHES ".*_opencl$")
+    if (${kyzenrt_name} MATCHES ".*_opencl$")
         set(ENABLE_OPENCL ON)
     endif ()
 
     set(ENABLE_HEXAGON OFF)
-    if (${rnllama_name} MATCHES ".*_hexagon.*")
+    if (${kyzenrt_name} MATCHES ".*_hexagon.*")
         set(ENABLE_HEXAGON ON)
     endif ()
 
@@ -96,15 +125,15 @@ function(build_rnllama_jni jni_name rnllama_name arch cpu_flags)
         target_compile_options(${jni_name} PRIVATE -DRNLLAMA_ANDROID_ENABLE_LOGGING)
     endif ()
 
-    # Link to rnllama library
+    # Link to kyzenrt library
     if (RNLLAMA_BUILD_FROM_SOURCE)
         # Link to the shared library we just built in rnllama subdirectory
-        target_link_libraries(${jni_name} PRIVATE ${rnllama_name})
+        target_link_libraries(${jni_name} PRIVATE ${kyzenrt_name})
     else()
         # Link to prebuilt shared library from jniLibs
         # The prebuilt .so files will be loaded at runtime via System.loadLibrary()
         # We need to tell CMake where to find them for linking
-        set(PREBUILT_LIB_PATH ${CMAKE_SOURCE_DIR}/jniLibs/${ANDROID_ABI}/lib${rnllama_name}.so)
+        set(PREBUILT_LIB_PATH ${CMAKE_SOURCE_DIR}/jniLibs/${ANDROID_ABI}/lib${kyzenrt_name}.so)
         target_link_libraries(${jni_name} PRIVATE ${PREBUILT_LIB_PATH})
     endif()
 
@@ -142,27 +171,27 @@ function(build_rnllama_jni jni_name rnllama_name arch cpu_flags)
 endfunction()
 
 # Default target (no specific CPU features)
-build_rnllama_jni("rnllama_jni" "rnllama" "generic" "")
+build_kyzenrt_jni("kyzenrt_jni" "kyzenrt" "generic" "")
 
 if (ANDROID_ABI AND ANDROID_ABI STREQUAL "arm64-v8a")
     # ARM64 targets
     # Removing fp16 for now as it leads to issues with some models like deepseek r1 distills
     # https://github.com/mybigday/llama.rn/pull/110#issuecomment-2609918310
-    build_rnllama_jni("rnllama_jni_v8" "rnllama_v8" "arm" "-march=armv8-a")
-    build_rnllama_jni("rnllama_jni_v8_2" "rnllama_v8_2" "arm" "-march=armv8.2-a")
-    build_rnllama_jni("rnllama_jni_v8_2_dotprod" "rnllama_v8_2_dotprod" "arm" "-march=armv8.2-a+dotprod")
-    build_rnllama_jni("rnllama_jni_v8_2_i8mm" "rnllama_v8_2_i8mm" "arm" "-march=armv8.2-a+i8mm")
-    build_rnllama_jni("rnllama_jni_v8_2_dotprod_i8mm" "rnllama_v8_2_dotprod_i8mm" "arm" "-march=armv8.2-a+dotprod+i8mm")
-    build_rnllama_jni("rnllama_jni_v8_2_dotprod_i8mm_hexagon_opencl" "rnllama_v8_2_dotprod_i8mm_hexagon_opencl" "arm" "-march=armv8.2-a+dotprod+i8mm")
+    build_kyzenrt_jni("kyzenrt_jni_v8" "kyzenrt_v8" "arm" "-march=armv8-a")
+    build_kyzenrt_jni("kyzenrt_jni_v8_2" "kyzenrt_v8_2" "arm" "-march=armv8.2-a")
+    build_kyzenrt_jni("kyzenrt_jni_v8_2_dotprod" "kyzenrt_v8_2_dotprod" "arm" "-march=armv8.2-a+dotprod")
+    build_kyzenrt_jni("kyzenrt_jni_v8_2_i8mm" "kyzenrt_v8_2_i8mm" "arm" "-march=armv8.2-a+i8mm")
+    build_kyzenrt_jni("kyzenrt_jni_v8_2_dotprod_i8mm" "kyzenrt_v8_2_dotprod_i8mm" "arm" "-march=armv8.2-a+dotprod+i8mm")
+    build_kyzenrt_jni("kyzenrt_jni_v8_2_dotprod_i8mm_hexagon_opencl" "kyzenrt_v8_2_dotprod_i8mm_hexagon_opencl" "arm" "-march=armv8.2-a+dotprod+i8mm")
 
     # https://github.com/ggerganov/llama.cpp/blob/master/docs/android.md#cross-compile-using-android-ndk
     # llama.cpp will deal with the cpu features
-    # build_rnllama_jni("rnllama_jni_v8_7" "rnllama_v8_7" "arm" "-march=armv8.7-a")
+    # build_kyzenrt_jni("kyzenrt_jni_v8_7" "kyzenrt_v8_7" "arm" "-march=armv8.7-a")
     # TODO: Add support runtime check for cpu features
     # At the moment runtime check is failing.
 
 elseif (ANDROID_ABI AND ANDROID_ABI STREQUAL "x86_64")
     # x86_64 target
-    build_rnllama_jni("rnllama_jni_x86_64" "rnllama_x86_64" "x86" "-march=x86-64;-mtune=generic;-msse4.2;-mpopcnt")
+    build_kyzenrt_jni("kyzenrt_jni_x86_64" "kyzenrt_x86_64" "x86" "-march=x86-64;-mtune=generic;-msse4.2;-mpopcnt")
 
 endif ()

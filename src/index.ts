@@ -1,5 +1,14 @@
+/**
+ * KyzenRT — Universal edge AI inference runtime
+ * Copyright (c) 2025 Kypzen (kypzen.com)
+ *
+ * Built on llama.cpp (MIT) — github.com/ggml-org/llama.cpp
+ * Original binding: llama.rn (MIT) — github.com/mybigday/llama.rn
+ *
+ * SPDX-License-Identifier: MIT
+ */
 import { Platform } from 'react-native'
-import RNLlama from './NativeRNLlama'
+import RNLlama from './NativeKyzenRT'
 import './jsi'
 import type {
   NativeContextParams,
@@ -1301,3 +1310,7 @@ export const BuildInfo = {
   number: BUILD_NUMBER,
   commit: BUILD_COMMIT,
 }
+
+export const initKyzenRT = initLlama;
+export const releaseAll = releaseAllLlama;
+export { LlamaContext as KyzenContext };
